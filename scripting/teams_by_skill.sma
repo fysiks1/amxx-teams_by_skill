@@ -1,10 +1,12 @@
 #include <amxmodx>
 #include <amxmisc>
 
-// #define NOPLAYERTEST
+#define NOPLAYERTEST
 
 new Trie:g_tSkillLevels
 new Bool:g_bActive
+new g_iPlayers[32], g_iTeam[sizeof g_iPlayers]
+new g_iPlayersNum, g_iAssignmentCounter
 
 enum asdf {
 	ID,
@@ -28,7 +30,7 @@ new g_szTestAuthIds[][] = {
 
 public plugin_init()
 {
-	register_plugin("Assign Teams by Skill", "0.2", "Fysiks")
+	register_plugin("Assign Teams by Skill", "0.3", "Fysiks")
 	
 	register_concmd("amx_assignteams", "cmdAssignTeams", ADMIN_MAP)
 
@@ -56,21 +58,19 @@ public cmdAssignTeams(id, level, cid)
 
 	new id, szAuthId[33], iPlayerSkill[32][asdf]
 
-	new iPlayers[32], iPlayersNum
-
 #if defined NOPLAYERTEST
-	iPlayersNum = 8
-	for( new i = 0; i < iPlayersNum; i++ )
+	g_iPlayersNum = 8
+	for( new i = 0; i < g_iPlayersNum; i++ )
 	{
-		iPlayers[i] = i+1
+		g_iPlayers[i] = i+1
 	}
 #else
-	get_players(iPlayers, iPlayersNum)
+	get_players(g_iPlayers, g_iPlayersNum)
 #endif
 
-	for( new i = 0; i < iPlayersNum; i++ )
+	for( new i = 0; i < g_iPlayersNum; i++ )
 	{
-		id = iPlayers[i]
+		id = g_iPlayers[i]
 #if defined NOPLAYERTEST
 		copy(szAuthId, charsmax(szAuthId), g_szTestAuthIds[i])
 #else
@@ -81,30 +81,51 @@ public cmdAssignTeams(id, level, cid)
 	}
 
 	// Sort by skill
-	SortCustom2D(iPlayerSkill, iPlayersNum, "SortBySkill")
+	SortCustom2D(iPlayerSkill, g_iPlayersNum, "SortBySkill")
 
 	// Assign Teams
-	for( new i = 0; i < iPlayersNum; i++ )
+	for( new i = 0; i < g_iPlayersNum; i++ )
 	{
-		if( (i % 2) == 0 )
+		g_iTeam[i] = (i % 2) == 0 ? 1 : 2
+
+		switch( g_iTeam[i] )
 		{
-#if defined NOPLAYERTEST
-			server_print("%d -> %d >> Allies", iPlayerSkill[i][ID], iPlayerSkill[i][SKILL])
-#else
-			amxclient_cmd(iPlayerSkill[i][ID], "jointeam", "1")
-#endif
-		}
-		else
-		{
-#if defined NOPLAYERTEST
-			server_print("%d -> %d >> Axis", iPlayerSkill[i][ID], iPlayerSkill[i][SKILL])
-#else
-			amxclient_cmd(iPlayerSkill[i][ID], "jointeam", "2")
-#endif
+			case 1: server_print("%d -> %d >> Allies", iPlayerSkill[i][ID], iPlayerSkill[i][SKILL])
+			case 2: server_print("%d -> %d >> Axis", iPlayerSkill[i][ID], iPlayerSkill[i][SKILL])
 		}
 	}
 
+	g_iAssignmentCounter = 0
+	set_task(0.5, "ExecuteTeamAssignments", .flags="a", .repeat=g_iPlayersNum)
+
 	return PLUGIN_HANDLED
+}
+
+public ExecuteTeamAssignments()
+{
+	new i = g_iAssignmentCounter
+
+#if !defined NOPLAYERTEST
+	if( !is_user_connected(g_iPlayers[i]) )
+		return
+#endif
+	switch( g_iTeam[i] )
+	{
+		case 1:
+#if defined NOPLAYERTEST
+			server_print("%d -> Allies", g_iPlayers[i])
+#else
+			amxclient_cmd(g_iPlayers[i], "jointeam", "1")
+#endif
+		case 2:
+#if defined NOPLAYERTEST
+			server_print("%d -> Axis", g_iPlayers[i])
+#else
+			amxclient_cmd(g_iPlayers[i], "jointeam", "2")
+#endif
+	}
+
+	g_iAssignmentCounter += 1
 }
 
 public SortBySkill(const elem1[], const elem2[], const array[], data[], data_size)
