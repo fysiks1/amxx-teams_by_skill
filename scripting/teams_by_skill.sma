@@ -1,12 +1,13 @@
 #include <amxmodx>
 #include <amxmisc>
 
-#define NOPLAYERTEST
+// #define NOPLAYERTEST
 
 new Trie:g_tSkillLevels
-new Bool:g_bActive
+new bool:g_bActive
 new g_iPlayers[32], g_iTeam[sizeof g_iPlayers]
 new g_iPlayersNum, g_iAssignmentCounter
+new g_iCaller
 
 enum asdf {
 	ID,
@@ -30,7 +31,7 @@ new g_szTestAuthIds[][] = {
 
 public plugin_init()
 {
-	register_plugin("Assign Teams by Skill", "0.3", "Fysiks")
+	register_plugin("Assign Teams by Skill", "0.4", "Fysiks")
 	
 	register_concmd("amx_assignteams", "cmdAssignTeams", ADMIN_MAP)
 
@@ -56,7 +57,8 @@ public cmdAssignTeams(id, level, cid)
 		return PLUGIN_HANDLED
 	}
 
-	new id, szAuthId[33], iPlayerSkill[32][asdf]
+	g_iCaller = id
+	new _id, szAuthId[33], iPlayerSkill[32][asdf]
 
 #if defined NOPLAYERTEST
 	g_iPlayersNum = 8
@@ -70,13 +72,13 @@ public cmdAssignTeams(id, level, cid)
 
 	for( new i = 0; i < g_iPlayersNum; i++ )
 	{
-		id = g_iPlayers[i]
+		_id = g_iPlayers[i]
 #if defined NOPLAYERTEST
 		copy(szAuthId, charsmax(szAuthId), g_szTestAuthIds[i])
 #else
-		get_user_authid(id, szAuthId, charsmax(szAuthId))
+		get_user_authid(_id, szAuthId, charsmax(szAuthId))
 #endif
-		iPlayerSkill[i][ID] = id
+		iPlayerSkill[i][ID] = _id
 		TrieGetCell(g_tSkillLevels, szAuthId, iPlayerSkill[i][SKILL])
 	}
 
@@ -97,6 +99,9 @@ public cmdAssignTeams(id, level, cid)
 
 	g_iAssignmentCounter = 0
 	set_task(0.5, "ExecuteTeamAssignments", .flags="a", .repeat=g_iPlayersNum)
+	g_bActive = true
+
+	console_print(id, "Team assignments in progress")
 
 	return PLUGIN_HANDLED
 }
@@ -112,20 +117,36 @@ public ExecuteTeamAssignments()
 	switch( g_iTeam[i] )
 	{
 		case 1:
+		{
 #if defined NOPLAYERTEST
 			server_print("%d -> Allies", g_iPlayers[i])
 #else
 			amxclient_cmd(g_iPlayers[i], "jointeam", "1")
+			client_print(g_iPlayers[i], print_chat, "You have been assigned to Allies")
 #endif
+		}
 		case 2:
+		{
 #if defined NOPLAYERTEST
 			server_print("%d -> Axis", g_iPlayers[i])
 #else
 			amxclient_cmd(g_iPlayers[i], "jointeam", "2")
+			client_print(g_iPlayers[i], print_chat, "You have been assigned to Axis")
 #endif
+		}
 	}
 
 	g_iAssignmentCounter += 1
+
+	if( g_iAssignmentCounter == g_iPlayersNum )
+	{
+		g_bActive = false
+
+		if( is_user_connected(g_iCaller) || g_iCaller == 0 )
+		{
+			console_print(g_iCaller, "Team assignments complete")
+		}
+	}
 }
 
 public SortBySkill(const elem1[], const elem2[], const array[], data[], data_size)
