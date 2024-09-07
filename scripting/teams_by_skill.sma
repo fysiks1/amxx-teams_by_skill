@@ -4,10 +4,10 @@
 // #define NOPLAYERTEST
 
 new Trie:g_tSkillLevels
-new bool:g_bActive
 new g_iPlayers[32], g_iTeam[sizeof g_iPlayers]
 new g_iPlayersNum, g_iAssignmentCounter
 new g_iCaller
+new const TASKID = 874434
 
 enum asdf {
 	ID,
@@ -31,7 +31,7 @@ new g_szTestAuthIds[][] = {
 
 public plugin_init()
 {
-	register_plugin("Assign Teams by Skill", "0.4", "Fysiks")
+	register_plugin("Assign Teams by Skill", "0.5", "Fysiks")
 	
 	register_concmd("amx_assignteams", "cmdAssignTeams", ADMIN_MAP)
 
@@ -51,7 +51,7 @@ public cmdAssignTeams(id, level, cid)
 		return PLUGIN_HANDLED
 	}
 
-	if( g_bActive )
+	if( task_exists(TASKID) )
 	{
 		console_print(id, "Team assignments are in progress")
 		return PLUGIN_HANDLED
@@ -61,7 +61,7 @@ public cmdAssignTeams(id, level, cid)
 	new _id, szAuthId[33], iPlayerSkill[32][asdf]
 
 #if defined NOPLAYERTEST
-	g_iPlayersNum = 8
+	g_iPlayersNum = sizeof g_szTestAuthIds
 	for( new i = 0; i < g_iPlayersNum; i++ )
 	{
 		g_iPlayers[i] = i+1
@@ -98,8 +98,7 @@ public cmdAssignTeams(id, level, cid)
 	}
 
 	g_iAssignmentCounter = 0
-	set_task(0.5, "ExecuteTeamAssignments", .flags="a", .repeat=g_iPlayersNum)
-	g_bActive = true
+	set_task(0.75, "ExecuteTeamAssignments", TASKID, .flags="a", .repeat=g_iPlayersNum)
 
 	console_print(id, "Team assignments in progress")
 
@@ -109,9 +108,10 @@ public cmdAssignTeams(id, level, cid)
 public ExecuteTeamAssignments()
 {
 	new i = g_iAssignmentCounter
+	new id = g_iPlayers[i]
 
 #if !defined NOPLAYERTEST
-	if( !is_user_connected(g_iPlayers[i]) )
+	if( !is_user_connected(id) )
 		return
 #endif
 	switch( g_iTeam[i] )
@@ -119,19 +119,21 @@ public ExecuteTeamAssignments()
 		case 1:
 		{
 #if defined NOPLAYERTEST
-			server_print("%d -> Allies", g_iPlayers[i])
+			server_print("%d -> Allies", id)
 #else
-			amxclient_cmd(g_iPlayers[i], "jointeam", "1")
-			client_print(g_iPlayers[i], print_chat, "You have been assigned to Allies")
+			amxclient_cmd(id, "jointeam", "1")
+			client_print(id, print_chat, "You have been assigned to Allies")
+			console_print(g_iCaller, "%n was assigned to Allies", id)
 #endif
 		}
 		case 2:
 		{
 #if defined NOPLAYERTEST
-			server_print("%d -> Axis", g_iPlayers[i])
+			server_print("%d -> Axis", id)
 #else
-			amxclient_cmd(g_iPlayers[i], "jointeam", "2")
-			client_print(g_iPlayers[i], print_chat, "You have been assigned to Axis")
+			amxclient_cmd(id, "jointeam", "2")
+			client_print(id, print_chat, "You have been assigned to Axis")
+			console_print(g_iCaller, "%n was assigned to Axis", id)
 #endif
 		}
 	}
@@ -140,8 +142,6 @@ public ExecuteTeamAssignments()
 
 	if( g_iAssignmentCounter == g_iPlayersNum )
 	{
-		g_bActive = false
-
 		if( is_user_connected(g_iCaller) || g_iCaller == 0 )
 		{
 			console_print(g_iCaller, "Team assignments complete")
