@@ -31,7 +31,7 @@ new g_szTestAuthIds[][] = {
 
 public plugin_init()
 {
-	register_plugin("Assign Teams by Skill", "0.5", "Fysiks")
+	register_plugin("Assign Teams by Skill", "0.6", "Fysiks")
 	
 	register_concmd("amx_assignteams", "cmdAssignTeams", ADMIN_MAP)
 
@@ -51,11 +51,15 @@ public cmdAssignTeams(id, level, cid)
 		return PLUGIN_HANDLED
 	}
 
+	log_amx("amx_assignteams: called")
+
 	if( task_exists(TASKID) )
 	{
 		console_print(id, "Team assignments are in progress")
 		return PLUGIN_HANDLED
 	}
+
+	log_amx("amx_assignteams: calculate teams")
 
 	g_iCaller = id
 	new _id, szAuthId[33], iPlayerSkill[32][asdf]
@@ -69,6 +73,8 @@ public cmdAssignTeams(id, level, cid)
 #else
 	get_players(g_iPlayers, g_iPlayersNum)
 #endif
+
+	log_amx("amx_assignteams: player count is %d", g_iPlayersNum)
 
 	for( new i = 0; i < g_iPlayersNum; i++ )
 	{
@@ -102,6 +108,8 @@ public cmdAssignTeams(id, level, cid)
 
 	console_print(id, "Team assignments in progress")
 
+	log_amx("amx_assignteams: task started")
+
 	return PLUGIN_HANDLED
 }
 
@@ -109,6 +117,8 @@ public ExecuteTeamAssignments()
 {
 	new i = g_iAssignmentCounter
 	new id = g_iPlayers[i]
+
+	log_amx("amx_assignteams: assign team for %N to %d", id, g_iTeam[i])
 
 #if !defined NOPLAYERTEST
 	if( !is_user_connected(id) )
@@ -123,7 +133,7 @@ public ExecuteTeamAssignments()
 #else
 			amxclient_cmd(id, "jointeam", "1")
 			client_print(id, print_chat, "You have been assigned to Allies")
-			console_print(g_iCaller, "%n was assigned to Allies", id)
+			console_print(g_iCaller, "%n was assigned to Allies (%i/%i)", id, i+1, g_iPlayersNum)
 #endif
 		}
 		case 2:
@@ -133,10 +143,14 @@ public ExecuteTeamAssignments()
 #else
 			amxclient_cmd(id, "jointeam", "2")
 			client_print(id, print_chat, "You have been assigned to Axis")
-			console_print(g_iCaller, "%n was assigned to Axis", id)
+			console_print(g_iCaller, "%n was assigned to Axis (%i/%i)", id, i+1, g_iPlayersNum)
 #endif
 		}
 	}
+
+	client_print(0, print_chat, "Team Assignment Progress:  %i/%i", i+1, g_iPlayersNum)
+
+	log_amx("amx_assignteams: team assigned %i/%i", i+1, g_iPlayersNum)
 
 	g_iAssignmentCounter += 1
 
@@ -146,6 +160,7 @@ public ExecuteTeamAssignments()
 		{
 			console_print(g_iCaller, "Team assignments complete")
 		}
+		log_amx("amx_assignteams: task over")
 	}
 }
 
