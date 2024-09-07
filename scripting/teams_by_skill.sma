@@ -31,7 +31,7 @@ new g_szTestAuthIds[][] = {
 
 public plugin_init()
 {
-	register_plugin("Assign Teams by Skill", "0.6", "Fysiks")
+	register_plugin("Assign Teams by Skill", "0.7", "Fysiks")
 	
 	register_concmd("amx_assignteams", "cmdAssignTeams", ADMIN_MAP)
 
